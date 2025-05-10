@@ -3,8 +3,8 @@ package run_test
 import (
 	"time"
 
-	"github.com/superblocksteam/run"
-	"github.com/superblocksteam/run/contrib/preempt"
+	"github.com/walteh/run"
+	"github.com/walteh/run/contrib/preempt"
 )
 
 func Example() {

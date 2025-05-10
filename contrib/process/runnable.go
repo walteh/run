@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/superblocksteam/run"
+	"github.com/walteh/run"
 )
 
 type process struct {

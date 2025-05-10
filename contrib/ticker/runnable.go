@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/superblocksteam/run"
+	"github.com/walteh/run"
 )
 
 type runnable struct {

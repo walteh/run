@@ -29,11 +29,15 @@ func (g *group) add(execute func(context.Context) error, interrupt func(context.
 // Run only returns when all actors have exited.
 // Run returns the error returned by the first exiting actor.
 func (g *group) run() error {
+	return g.runContext(context.Background())
+}
+
+func (g *group) runContext(inputCtx context.Context) error {
 	if len(g.actors) == 0 {
 		return nil
 	}
 
-	runCtx, runCancel := context.WithCancel(context.Background())
+	runCtx, runCancel := context.WithCancel(inputCtx)
 
 	// Run each actor.
 	runCh := make(chan error, len(g.actors))
@@ -54,9 +58,9 @@ func (g *group) run() error {
 	var closeCtx context.Context
 	{
 		if g.closeTimeout == 0 {
-			closeCtx = context.Background()
+			closeCtx = inputCtx
 		} else {
-			ctx, cancel := context.WithTimeout(context.Background(), g.closeTimeout)
+			ctx, cancel := context.WithTimeout(inputCtx, g.closeTimeout)
 			defer cancel()
 			closeCtx = ctx
 		}

@@ -137,6 +137,11 @@ func (g *Group) Run() error {
 	return g.group.run()
 }
 
+// RunContext is the same as [Group.Run] but allows for a context to be passed in.
+func (g *Group) RunContext(ctx context.Context) error {
+	return g.group.runContext(ctx)
+}
+
 // Alive assess the liveness of all registered Runnables.
 func (g *Group) Alive() bool {
 	for _, r := range g.runnables {

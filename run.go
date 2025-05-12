@@ -21,6 +21,8 @@ type Group struct {
 	syncShutdown bool
 }
 
+
+
 type Runnable interface {
 	// Run is responsible for executing the main logic of the component
 	// and is expected to run until it needs to shut down. Cancellation
@@ -89,7 +91,13 @@ func (g *Group) Always(runnables ...Runnable) {
 	g.Add(true, runnables...)
 }
 
-func (g *Group) add(r Runnable) {
+func (g *Group) AddWithID(r Runnable) ID {
+	return g.add(r)
+}
+
+
+
+func (g *Group) add(r Runnable) ID {
 	// In case clients do not use the New function to create a new Group.
 	if g.logger == nil {
 		g.logger = defaultLogger
@@ -103,11 +111,11 @@ func (g *Group) add(r Runnable) {
 
 	g.runnables = append(g.runnables, r)
 
-	g.group.add(func(ctx context.Context) error {
+	return g.group.add(func(ctx context.Context) error {
 		return do(ctx, r.Run, logger.With(slog.String("method", "run")))
 	}, func(ctx context.Context) error {
 		return do(ctx, r.Close, logger.With(slog.String("method", "close")))
-	})
+	}, r.Alive)
 }
 
 func do(ctx context.Context, fn func(context.Context) error, logger *slog.Logger) error {

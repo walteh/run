@@ -12,7 +12,9 @@ type group struct {
 	actors       []actor
 	closeTimeout time.Duration
 	syncShutdown bool
+	deps map[ID][]ID
 }
+
 
 // Add an actor (function) to the group. Each actor must be pre-emptable by an
 // interrupt function. That is, if interrupt is invoked, execute should return.
@@ -20,8 +22,19 @@ type group struct {
 //
 // The first actor (function) to return interrupts all running actors.
 // The error is passed to the interrupt functions, and is returned by Run.
-func (g *group) add(execute func(context.Context) error, interrupt func(context.Context) error) {
-	g.actors = append(g.actors, actor{execute, interrupt})
+func (g *group) add(execute func(context.Context) error, interrupt func(context.Context) error, ready func() bool) ID {
+	actor := actor{execute, interrupt, ready, NewID()}
+	g.actors = append(g.actors, actor)
+	return actor.id
+}
+
+func (g *group) findByName(name ID) (*actor, bool) {
+	for _, a := range g.actors {
+		if a.id == name {
+			return &a, true
+		}
+	}
+	return nil, false
 }
 
 // Run all actors (functions) concurrently.
@@ -37,14 +50,45 @@ func (g *group) runContext(inputCtx context.Context) error {
 		return nil
 	}
 
+
+	ready := make(chan actor, len(g.actors))
+	defer close(ready)
+
+	for _, a := range g.actors {
+		myDeps := g.deps[a.id]
+		go func(a actor) {
+			for {
+				ready := true
+				for _, dep := range myDeps {
+					depActor, ok := g.findByName(dep)
+					if !ok {
+						panic("dependency not found: " + dep)
+					}
+					if !depActor.ready() {
+						ready = false
+						break
+					}
+				}
+				if ready {
+					break
+				}
+			}
+			ready <- a
+		}(a)
+	}
+
+
+	
 	runCtx, runCancel := context.WithCancel(inputCtx)
 
 	// Run each actor.
 	runCh := make(chan error, len(g.actors))
 	defer close(runCh)
 
+
 	for _, a := range g.actors {
 		go func(a actor) {
+			<-ready
 			runCh <- a.execute(runCtx)
 		}(a)
 	}
@@ -102,4 +146,6 @@ func (g *group) runContext(inputCtx context.Context) error {
 type actor struct {
 	execute   func(context.Context) error
 	interrupt func(context.Context) error
+	ready     func() bool
+	id        ID
 }

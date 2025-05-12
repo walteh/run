@@ -24,7 +24,7 @@ func TestZero(t *testing.T) {
 func TestOne(t *testing.T) {
 	myError := errors.New("foobar")
 	var g group
-	g.add(func(context.Context) error { return myError }, func(context.Context) error { return nil })
+	g.add(func(context.Context) error { return myError }, func(context.Context) error { return nil }, func() bool { return true })
 	res := make(chan error)
 	go func() { res <- g.run() }()
 	select {
@@ -40,12 +40,12 @@ func TestOne(t *testing.T) {
 func TestMany(t *testing.T) {
 	interrupt := errors.New("interrupt")
 	var g group
-	g.add(func(context.Context) error { return interrupt }, func(context.Context) error { return nil })
+	g.add(func(context.Context) error { return interrupt }, func(context.Context) error { return nil }, func() bool { return true })
 	cancel := make(chan struct{})
 	g.add(func(context.Context) error { <-cancel; return nil }, func(context.Context) error {
 		close(cancel)
 		return nil
-	})
+	}, func() bool { return true })
 	res := make(chan error)
 	go func() { res <- g.run() }()
 	select {
